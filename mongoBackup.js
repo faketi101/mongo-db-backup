@@ -3,7 +3,6 @@ import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
 
-// configure .env variables if needed
 
 // ==== CONFIG ====
 dotenv.config();
@@ -23,18 +22,31 @@ async function backupCluster() {
       fs.mkdirSync(rootDir, { recursive: true });
     }
 
-    // 2. Create timestamped folder inside "exports"
+    // 2. Extract cluster info & username from URI
+    const regex = /^mongodb\+srv:\/\/([^:]+):[^@]+@([^/]+)/;
+    const match = uri.match(regex);
+    let user = "unknownUser";
+    let cluster = "unknownCluster";
+    if (match) {
+      user = match[1];
+      cluster = match[2].replace(/\./g, "-"); // replace dots for safe folder names
+    }
+
+    // 3. Create timestamp
     const timestamp = new Date()
       .toISOString()
       .replace(/T/, "_") // replace T with _
       .replace(/:/g, "-") // replace : with -
       .split(".")[0]; // remove milliseconds
-    const backupDir = path.join(rootDir, timestamp);
+
+    // 4. Build backup folder name
+    const folderName = `${user}@${cluster}_${timestamp}`;
+    const backupDir = path.join(rootDir, folderName);
     fs.mkdirSync(backupDir, { recursive: true });
 
     console.log(`📂 Backup folder: ${backupDir}`);
 
-    // 3. List all databases
+    // 5. List all databases
     const adminDb = client.db().admin();
     const dbs = await adminDb.listDatabases();
 
@@ -50,7 +62,7 @@ async function backupCluster() {
       console.log(`\n=== 📦 Backing up database: ${dbName} ===`);
       const db = client.db(dbName);
 
-      // Create db folder inside timestamp backup dir
+      // Create db folder inside backup dir
       const dbDir = path.join(backupDir, dbName);
       fs.mkdirSync(dbDir, { recursive: true });
 
@@ -67,9 +79,7 @@ async function backupCluster() {
         const filePath = path.join(dbDir, `${name}.json`);
         fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 
-        console.log(
-          `✅ Saved ${dbName}.${name} (${data.length} docs) -> ${filePath}`
-        );
+        console.log(`✅ Saved ${dbName}.${name} (${data.length} docs) -> ${filePath}`);
       }
     }
 

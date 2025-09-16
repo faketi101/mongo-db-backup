@@ -1,6 +1,4 @@
 
-
-````markdown
 # MongoDB Cluster Backup & Restore Scripts
 
 **Author:** TARIKUL ISLAM  
@@ -119,7 +117,5 @@ If you have any questions or suggestions, reach out to:
 * **TARIKUL ISLAM**
 * Website: [https://tarikul.dev/](https://tarikul.dev/)
 * Email: [ti@tarikul.dev](mailto:ti@tarikul.dev)
-
-```
 
 

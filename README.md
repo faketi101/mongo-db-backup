@@ -34,7 +34,7 @@ This repository contains two Node.js scripts to **backup** and **restore** Mongo
    ```bash
    git clone https://github.com/faketi101/mongo-db-backup.git
    cd mongo-db-backup
-````
+
 
 2. Install dependencies using **pnpm**:
 
@@ -56,7 +56,7 @@ This repository contains two Node.js scripts to **backup** and **restore** Mongo
    const uri = process.env.MONGODB_URI;
    ```
 
----
+
 
 ## Usage
 
@@ -84,7 +84,7 @@ exports/
       products.json
 ```
 
----
+
 
 ### 2. Restore Cluster
 
@@ -101,7 +101,7 @@ pnpm exec node cluster-restore.js
   * `Append`: Add documents to existing collections.
   * `Overwrite`: Drop collections before inserting documents.
 
----
+
 
 ## Notes
 

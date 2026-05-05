@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import fs from "fs";
 import path from "path";
 import inquirer from "inquirer";
@@ -51,13 +51,14 @@ async function createBackupDir() {
     if (!fs.existsSync(exportsRoot)) {
         fs.mkdirSync(exportsRoot, { recursive: true });
     }
-    const regex = /^mongodb\+srv:\/\/([^:]+):[^@]+@([^/]+)/;
+    const regex = /^mongodb(?:\+srv)?:\/\/([^:]+):[^@]+@([^/?]+)/;
     const match = uri.match(regex);
     let user = "unknownUser";
     let cluster = "unknownCluster";
     if (match) {
         user = match[1];
-        cluster = match[2].replace(/\./g, "-");
+        let hosts = match[2];
+        cluster = hosts.split(',')[0].split(':')[0].replace(/\./g, "-");
     }
     const timestamp = new Date().toISOString().replace(/T/, "_").replace(/:/g, "-").split(".")[0];
     const folderName = `${user}@${cluster}_${timestamp}`;
@@ -134,8 +135,37 @@ async function chooseBackupFolder() {
     return folder ? path.join(exportsRoot, folder) : null;
 }
 
+// Checks if a string looks like a 24-char hex ObjectId
+function isObjectIdString(value) {
+    return typeof value === 'string' && /^[a-f\d]{24}$/i.test(value);
+}
+
+// Recursively walk a document and convert ObjectId-looking strings
+// back to real ObjectId instances
+function convertObjectIds(doc) {
+    if (Array.isArray(doc)) {
+        return doc.map(convertObjectIds);
+    }
+    if (doc !== null && typeof doc === 'object') {
+        const result = {};
+        for (const [key, value] of Object.entries(doc)) {
+            if (isObjectIdString(value)) {
+                result[key] = new ObjectId(value);
+            } else if (typeof value === 'object' && value !== null) {
+                result[key] = convertObjectIds(value);
+            } else {
+                result[key] = value;
+            }
+        }
+        return result;
+    }
+    return doc;
+}
+
 async function restoreCollection(db, collName, filePath, overwrite) {
-    const data = JSON.parse(fs.readFileSync(filePath));
+    const raw = JSON.parse(fs.readFileSync(filePath));
+    // Convert all ObjectId-looking strings back to real ObjectId instances
+    const data = raw.map(convertObjectIds);
 
     if (overwrite) {
         console.log(`🗑 Dropping collection: ${db.databaseName}.${collName}`);
